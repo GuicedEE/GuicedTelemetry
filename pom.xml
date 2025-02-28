@@ -39,23 +39,19 @@
 
         <dependency>
             <groupId>com.guicedee</groupId>
+            <artifactId>guiced-vertx</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.guicedee</groupId>
             <artifactId>guice-injection</artifactId>
             <scope>test</scope>
         </dependency>
 
         <dependency>
-            <groupId>com.guicedee</groupId>
-            <artifactId>guiced-rest-services</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.guicedee.persistence</groupId>
-            <artifactId>guiced-persistence</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.guicedee</groupId>
-            <artifactId>guiced-vertx</artifactId>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-opentelemetry</artifactId>
+            <version>${vertx.version}</version>
         </dependency>
 
         <dependency>
