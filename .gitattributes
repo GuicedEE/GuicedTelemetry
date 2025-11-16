@@ -1,0 +1,18 @@
+* text=auto eol=lf
+
+# Treat Markdown and docs as text
+*.md text linguist-documentation
+
+# Normalize shell/env files
+*.env text eol=lf
+*.properties text eol=lf
+
+# Keep line endings consistent for YAML
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Do not include GitHub Actions in linguist stats
+.github/** linguist-generated
+
+# Mark rules submodule as vendored docs for linguist
+rules/** linguist-vendored
