@@ -1,8 +1,9 @@
+import com.guicedee.client.services.config.IGuiceScanModuleInclusions;
 import com.guicedee.telemetry.implementations.GuiceTelemetryModuleInclusions;
 import com.guicedee.telemetry.implementations.DefaultTelemetryRegistration;
 import com.guicedee.telemetry.implementations.TraceModule;
 import com.guicedee.telemetry.spi.GuiceTelemetryRegistration;
-import com.guicedee.guicedinjection.interfaces.IGuiceModule;
+import com.guicedee.client.services.lifecycle.IGuiceModule;
 
 module com.guicedee.telemetry {
     requires transitive com.guicedee.vertx;
@@ -13,7 +14,7 @@ module com.guicedee.telemetry {
     exports com.guicedee.telemetry.annotations;
     exports com.guicedee.telemetry;
 
-    provides com.guicedee.guicedinjection.interfaces.IGuiceScanModuleInclusions with GuiceTelemetryModuleInclusions;
+    provides IGuiceScanModuleInclusions with GuiceTelemetryModuleInclusions;
     provides com.guicedee.telemetry.spi.GuiceTelemetryRegistration with DefaultTelemetryRegistration;
     provides IGuiceModule with TraceModule;
 

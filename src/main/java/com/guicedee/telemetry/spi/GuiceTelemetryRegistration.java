@@ -1,6 +1,6 @@
 package com.guicedee.telemetry.spi;
 
-import com.guicedee.guicedinjection.interfaces.IDefaultService;
+import com.guicedee.client.services.IDefaultService;
 import io.opentelemetry.api.OpenTelemetry;
 
 /**

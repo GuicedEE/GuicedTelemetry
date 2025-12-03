@@ -2,7 +2,7 @@ package com.guicedee.telemetry.implementations;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.matcher.Matchers;
-import com.guicedee.guicedinjection.interfaces.IGuiceModule;
+import com.guicedee.client.services.lifecycle.IGuiceModule;
 import com.guicedee.telemetry.annotations.Trace;
 import com.guicedee.telemetry.interceptors.TraceMethodInterceptor;
 
