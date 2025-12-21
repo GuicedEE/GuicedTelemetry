@@ -1,4 +1,8 @@
-# Guiced Telemetry
+# 📈 GuicedEE Telemetry
+
+[![JDK](https://img.shields.io/badge/JDK-25%2B-0A7?logo=java)](https://openjdk.org/projects/jdk/25/)
+[![Build](https://img.shields.io/badge/Build-Maven-C71A36?logo=apachemaven)](https://maven.apache.org/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 An OpenTelemetry addon for GuicedEE. This repository provides SPI and implementations to integrate OpenTelemetry with Vert.x-based services.
 
