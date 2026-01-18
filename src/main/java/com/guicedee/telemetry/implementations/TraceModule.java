@@ -13,6 +13,9 @@ import com.guicedee.telemetry.interceptors.TraceMethodInterceptor;
 public class TraceModule extends AbstractModule implements IGuiceModule<TraceModule> {
     @Override
     protected void configure() {
+        if (TelemetryPreStartup.getOptions() != null && !TelemetryPreStartup.getOptions().enabled()) {
+            return;
+        }
         TraceMethodInterceptor interceptor = new TraceMethodInterceptor();
         // Intercept any method where the TYPE is annotated with @Trace
         bindInterceptor(Matchers.annotatedWith(Trace.class), Matchers.any(), interceptor);

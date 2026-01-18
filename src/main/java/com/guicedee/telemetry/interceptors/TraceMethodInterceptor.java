@@ -1,7 +1,9 @@
 package com.guicedee.telemetry.interceptors;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.guicedee.telemetry.annotations.SpanAttribute;
 import com.guicedee.telemetry.annotations.Trace;
-import io.opentelemetry.api.GlobalOpenTelemetry;
+import com.guicedee.telemetry.implementations.OpenTelemetrySDKConfigurator;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
@@ -11,6 +13,7 @@ import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 
 /**
  * A simple Guice AOP interceptor that creates an OpenTelemetry span for methods
@@ -19,9 +22,10 @@ import java.lang.reflect.Method;
 public class TraceMethodInterceptor implements MethodInterceptor {
 
     private final Tracer tracer;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public TraceMethodInterceptor() {
-        this(GlobalOpenTelemetry.get());
+        this(OpenTelemetrySDKConfigurator.getOpenTelemetry());
     }
 
     public TraceMethodInterceptor(OpenTelemetry openTelemetry) {
@@ -36,14 +40,64 @@ public class TraceMethodInterceptor implements MethodInterceptor {
         Span span = tracer.spanBuilder(spanName)
                 .setSpanKind(SpanKind.INTERNAL)
                 .startSpan();
-        try {
-            return invocation.proceed();
+        try (var scope = span.makeCurrent()) {
+            recordAttributes(span, method, invocation.getArguments());
+            Object result = invocation.proceed();
+            recordReturnAttribute(span, method, result);
+            return result;
         } catch (Throwable t) {
             span.recordException(t);
             span.setStatus(StatusCode.ERROR, t.getMessage() == null ? "error" : t.getMessage());
             throw t;
         } finally {
             span.end();
+        }
+    }
+
+    private void recordAttributes(Span span, Method method, Object[] args) {
+        Parameter[] parameters = method.getParameters();
+        for (int i = 0; i < parameters.length; i++) {
+            SpanAttribute attr = parameters[i].getAnnotation(SpanAttribute.class);
+            if (attr != null) {
+                String name = attr.value().isBlank() ? parameters[i].getName() : attr.value();
+                setAttribute(span, name, args[i]);
+            }
+        }
+    }
+
+    private void recordReturnAttribute(Span span, Method method, Object result) {
+        SpanAttribute attr = method.getAnnotation(SpanAttribute.class);
+        if (attr != null) {
+            String name = attr.value().isBlank() ? "return_value" : attr.value();
+            setAttribute(span, name, result);
+        }
+    }
+
+    private void setAttribute(Span span, String name, Object value) {
+        if (value == null) {
+            span.setAttribute(name, "null");
+            return;
+        }
+
+        if (value instanceof String) {
+            span.setAttribute(name, (String) value);
+        } else if (value instanceof Boolean) {
+            span.setAttribute(name, (Boolean) value);
+        } else if (value instanceof Long) {
+            span.setAttribute(name, (Long) value);
+        } else if (value instanceof Double) {
+            span.setAttribute(name, (Double) value);
+        } else if (value instanceof Integer) {
+            span.setAttribute(name, ((Integer) value).longValue());
+        } else if (value instanceof Float) {
+            span.setAttribute(name, ((Float) value).doubleValue());
+        } else {
+            // Complex type - JSON
+            try {
+                span.setAttribute(name, objectMapper.writeValueAsString(value));
+            } catch (Exception e) {
+                span.setAttribute(name, value.toString());
+            }
         }
     }
 
