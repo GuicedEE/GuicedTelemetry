@@ -95,11 +95,11 @@ public class TelemetryIntegrationTest {
 
     @Test
     public void testTempoIntegration() {
-        // This test attempts to send a real OTLP signal to localhost:4317
+        // This test attempts to send a real OTLP signal to localhost:4318
         // It's mostly to verify that the SDK can be initialized with OTLP and doesn't crash
         // If Tempo is running in docker-compose, this will actually send data there.
 
-        System.setProperty("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317");
+        System.setProperty("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318");
 
         // Use the real configurator but with a custom service name
         // We need to reset the openTelemetry field first if it was already initialized
@@ -112,14 +112,14 @@ public class TelemetryIntegrationTest {
         Span span = tracer.spanBuilder("TempoIntegrationSpan").startSpan();
         try (var scope = span.makeCurrent()) {
             span.setAttribute("test.type", "tempo-integration");
-            logger.info("Sending trace to Tempo at http://localhost:4317");
+            logger.info("Sending trace to Tempo at http://localhost:4318");
         } finally {
             span.end();
         }
 
         // Wait a bit for batch processor to export
         try {
-            Thread.sleep(1000);
+            Thread.sleep(2000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

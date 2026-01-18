@@ -7,8 +7,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 @Telemetry(serviceName = "IntegrationTest", useInMemoryExporters = true)
-public class TracedService {
+public class TracedService{
     private static final Logger logger = LogManager.getLogger(TracedService.class);
+
+    public static java.lang.invoke.MethodHandles.Lookup getModuleLookup() {
+        return java.lang.invoke.MethodHandles.lookup();
+    }
 
     @Trace("TestSpan")
     public void doWork() {
