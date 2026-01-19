@@ -1,25 +1,32 @@
 package com.guicedee.telemetry.interceptors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Key;
+import com.guicedee.client.IGuiceContext;
+import com.guicedee.client.scopes.CallScoper;
 import com.guicedee.telemetry.annotations.SpanAttribute;
 import com.guicedee.telemetry.annotations.Trace;
 import com.guicedee.telemetry.implementations.OpenTelemetrySDKConfigurator;
 import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.SpanKind;
-import io.opentelemetry.api.trace.StatusCode;
-import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.api.trace.*;
+import io.opentelemetry.context.Context;
+import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.Map;
+import java.util.function.BiConsumer;
 
 /**
  * A simple Guice AOP interceptor that creates an OpenTelemetry span for methods
  * annotated with {@link Trace}, or for all methods in types annotated with {@link Trace}.
  */
 public class TraceMethodInterceptor implements MethodInterceptor {
+
+    private static final Key<Span> SPAN_KEY = Key.get(Span.class);
 
     private final Tracer tracer;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -34,24 +41,86 @@ public class TraceMethodInterceptor implements MethodInterceptor {
 
     @Override
     public Object invoke(MethodInvocation invocation) throws Throwable {
+        Tracer actualTracer = tracer;
+        if (actualTracer == null || OpenTelemetrySDKConfigurator.isReset()) {
+            actualTracer = OpenTelemetrySDKConfigurator.getOpenTelemetry().getTracer("com.guicedee.telemetry.trace");
+        }
         Method method = invocation.getMethod();
         String spanName = resolveSpanName(method);
 
-        Span span = tracer.spanBuilder(spanName)
-                .setSpanKind(SpanKind.INTERNAL)
-                .startSpan();
+        CallScoper callScoper = IGuiceContext.get(CallScoper.class);
+        Span parentSpan = null;
+        if (callScoper.isStartedScope()) {
+            parentSpan = (Span) callScoper.getValues().get(SPAN_KEY);
+        }
+
+        SpanBuilder spanBuilder = actualTracer.spanBuilder(spanName)
+                .setSpanKind(SpanKind.INTERNAL);
+
+        if (parentSpan != null) {
+            spanBuilder.setParent(Context.current().with(parentSpan));
+        }
+
+        Span span = spanBuilder.startSpan();
+
+        if (callScoper.isStartedScope()) {
+            callScoper.getValues().put(SPAN_KEY, span);
+        }
+
         try (var scope = span.makeCurrent()) {
             recordAttributes(span, method, invocation.getArguments());
             Object result = invocation.proceed();
+            if (result instanceof Uni<?>) {
+                return wrapUni(span, method, (Uni<?>) result, callScoper, parentSpan);
+            }
             recordReturnAttribute(span, method, result);
             return result;
         } catch (Throwable t) {
             span.recordException(t);
             span.setStatus(StatusCode.ERROR, t.getMessage() == null ? "error" : t.getMessage());
+            span.end();
+            if (callScoper.isStartedScope()) {
+                if (parentSpan != null) {
+                    callScoper.getValues().put(SPAN_KEY, parentSpan);
+                } else {
+                    callScoper.getValues().remove(SPAN_KEY);
+                }
+            }
             throw t;
         } finally {
-            span.end();
+            if (!Uni.class.isAssignableFrom(method.getReturnType())) {
+                span.end();
+                if (callScoper.isStartedScope()) {
+                    if (parentSpan != null) {
+                        callScoper.getValues().put(SPAN_KEY, parentSpan);
+                    } else {
+                        callScoper.getValues().remove(SPAN_KEY);
+                    }
+                }
+            }
         }
+    }
+
+    private Uni<?> wrapUni(Span span, Method method, Uni<?> uni, CallScoper callScoper, Span parentSpan) {
+        return uni.onItemOrFailure().invoke((item, failure) -> {
+            try (var scope = span.makeCurrent()) {
+                if (failure != null) {
+                    span.recordException(failure);
+                    span.setStatus(StatusCode.ERROR, failure.getMessage() == null ? "error" : failure.getMessage());
+                } else {
+                    recordReturnAttribute(span, method, item);
+                }
+            } finally {
+                span.end();
+                if (callScoper.isStartedScope()) {
+                    if (parentSpan != null) {
+                        callScoper.getValues().put(SPAN_KEY, parentSpan);
+                    } else {
+                        callScoper.getValues().remove(SPAN_KEY);
+                    }
+                }
+            }
+        });
     }
 
     private void recordAttributes(Span span, Method method, Object[] args) {

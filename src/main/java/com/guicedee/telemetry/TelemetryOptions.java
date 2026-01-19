@@ -45,4 +45,39 @@ public @interface TelemetryOptions {
      * @return true if logs should be configured.
      */
     boolean configureLogs() default true;
+
+    /**
+     * The service version for telemetry.
+     *
+     * @return the service version.
+     */
+    String serviceVersion() default "1.0.0";
+
+    /**
+     * The environment for telemetry (e.g., production, staging, development).
+     *
+     * @return the deployment environment.
+     */
+    String deploymentEnvironment() default "production";
+
+    /**
+     * Maximum number of spans to batch before sending.
+     *
+     * @return the max batch size.
+     */
+    int maxBatchSize() default 512;
+
+    /**
+     * Maximum number of log records to batch before sending.
+     *
+     * @return the max log batch size.
+     */
+    int maxLogBatchSize() default 512;
+
+    /**
+     * Whether to log the send and receipt of signals to the tracing server.
+     *
+     * @return true if signal logging is enabled.
+     */
+    boolean logSignals() default false;
 }

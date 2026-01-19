@@ -45,4 +45,11 @@ public @interface Telemetry {
      * @return true if logs should be configured.
      */
     boolean configureLogs() default true;
+
+    /**
+     * Whether to log the send and receipt of signals to the tracing server.
+     *
+     * @return true if signal logging is enabled.
+     */
+    boolean logSignals() default false;
 }

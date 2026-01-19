@@ -43,27 +43,42 @@ public class OpenTelemetrySDKConfigurator {
 
         TelemetryOptions options = TelemetryPreStartup.getOptions();
         String serviceName = "GuicedEE-Service";
+        String serviceVersion = "1.0.0";
+        String deploymentEnvironment = "production";
         String endpoint = "http://localhost:4318";
         boolean enabled = true;
         boolean useInMemory = false;
         boolean configureLogs = true;
+        boolean logSignals = false;
+        int maxBatchSize = 512;
+        int maxLogBatchSize = 512;
 
         if (options != null) {
             enabled = options.enabled();
             useInMemory = options.useInMemoryExporters();
             configureLogs = options.configureLogs();
-            if (!options.serviceName().isBlank()) {
+            logSignals = options.logSignals();
+            serviceVersion = options.serviceVersion();
+            deploymentEnvironment = options.deploymentEnvironment();
+            maxBatchSize = options.maxBatchSize();
+            maxLogBatchSize = options.maxLogBatchSize();
+            if (options.serviceName() != null && !options.serviceName().isBlank()) {
                 serviceName = options.serviceName();
             }
-            if (!options.otlpEndpoint().isBlank()) {
+            if (options.otlpEndpoint() != null && !options.otlpEndpoint().isBlank()) {
                 endpoint = options.otlpEndpoint();
             }
+            log.info("Options found: enabled={}, useInMemory={}, serviceName={}, endpoint={}", enabled, useInMemory, serviceName, endpoint);
+        } else {
+            log.info("No options found, using defaults");
         }
 
-        String envEndpoint = System.getenv("OTEL_EXPORTER_OTLP_ENDPOINT");
-        if (envEndpoint != null && !envEndpoint.isBlank()) {
-            endpoint = envEndpoint;
+        // System property wins for endpoint IF NOT in memory mode
+        if (!useInMemory) {
+            endpoint = com.guicedee.client.Environment.getSystemPropertyOrEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT", endpoint);
         }
+
+        log.info("Final telemetry endpoint: {}, Use InMemory: {}", endpoint, useInMemory);
 
         if (!enabled) {
             log.info("Telemetry is disabled via options.");
@@ -71,26 +86,13 @@ public class OpenTelemetrySDKConfigurator {
             return;
         }
 
-        if (configureLogs) {
-            LogUtils.addHighlightedConsoleLogger(org.apache.logging.log4j.Level.INFO);
-            try {
-                org.apache.logging.log4j.core.LoggerContext context = (org.apache.logging.log4j.core.LoggerContext) org.apache.logging.log4j.LogManager.getContext(false);
-                if (context.getConfiguration().getAppender("OpenTelemetryAppender") == null) {
-                    Class<?> appenderClass = Class.forName("io.opentelemetry.instrumentation.log4j.appender.v2_17.OpenTelemetryAppender");
-                    var builderMethod = appenderClass.getMethod("builder");
-                    var builder = builderMethod.invoke(null);
-                    builder.getClass().getMethod("setName", String.class).invoke(builder, "OpenTelemetryAppender");
-                    org.apache.logging.log4j.core.Appender appender = (org.apache.logging.log4j.core.Appender) builder.getClass().getMethod("build").invoke(builder);
-                    LogUtils.addAppender(appender, org.apache.logging.log4j.Level.ALL);
-                    log.info("OpenTelemetry Log4j2 Appender registered.");
-                }
-            } catch (Exception e) {
-                log.warn("Could not register OpenTelemetry Log4j2 Appender. Ensure opentelemetry-log4j-appender is on classpath.", e);
-            }
-        }
-
         Resource resource = Resource.getDefault()
-                .merge(Resource.create(Attributes.of(AttributeKey.stringKey("service.name"), serviceName)));
+                .merge(Resource.create(Attributes.of(
+                        AttributeKey.stringKey("service.name"), serviceName,
+                        AttributeKey.stringKey("service.version"), serviceVersion,
+                        AttributeKey.stringKey("deployment.environment"), deploymentEnvironment,
+                        AttributeKey.stringKey("host.name"), com.guicedee.client.Environment.getSystemPropertyOrEnvironment("HOSTNAME", "localhost")
+                )));
 
         SpanExporter spanExporter;
         LogRecordExporter logRecordExporter;
@@ -106,15 +108,39 @@ public class OpenTelemetrySDKConfigurator {
             logRecordExporter = OtlpHttpLogRecordExporter.builder().setEndpoint(endpoint).build();
         }
 
+        log.info("Using {} span exporter", useInMemory ? "InMemory" : "OTLP HTTP to " + endpoint);
+
+        if (logSignals) {
+            log.info("Enabling signal logging (OTel internal logging)");
+            System.setProperty("otel.java.logging.exporter.enabled", "true");
+            // Also set the level for the OTLP exporter loggers if possible
+            java.util.logging.Logger.getLogger("io.opentelemetry.exporter.otlp").setLevel(java.util.logging.Level.FINEST);
+            java.util.logging.Logger.getLogger("io.opentelemetry.sdk.trace.export").setLevel(java.util.logging.Level.FINEST);
+            java.util.logging.Logger.getLogger("io.opentelemetry.sdk.logs.export").setLevel(java.util.logging.Level.FINEST);
+        }
+
         SdkTracerProvider tracerProvider = SdkTracerProvider.builder()
-                .addSpanProcessor(useInMemory ? SimpleSpanProcessor.create(spanExporter) : BatchSpanProcessor.builder(spanExporter).build())
+                .addSpanProcessor(useInMemory ? SimpleSpanProcessor.create(spanExporter) : BatchSpanProcessor.builder(spanExporter)
+                        .setMaxExportBatchSize(maxBatchSize)
+                        .build())
                 .setResource(resource)
                 .build();
 
         SdkLoggerProvider loggerProvider = SdkLoggerProvider.builder()
-                .addLogRecordProcessor(useInMemory ? SimpleLogRecordProcessor.create(logRecordExporter) : BatchLogRecordProcessor.builder(logRecordExporter).build())
+                .addLogRecordProcessor(useInMemory ? SimpleLogRecordProcessor.create(logRecordExporter) : BatchLogRecordProcessor.builder(logRecordExporter)
+                        .setMaxExportBatchSize(maxLogBatchSize)
+                        .build())
                 .setResource(resource)
                 .build();
+
+        if (!useInMemory) {
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                log.info("Shutting down OpenTelemetry SDK...");
+                if (openTelemetry instanceof OpenTelemetrySdk) {
+                    ((OpenTelemetrySdk) openTelemetry).close();
+                }
+            }));
+        }
 
         // Allow SPI to further customize
         OpenTelemetrySdk sdk = OpenTelemetrySdk.builder()
@@ -128,6 +154,32 @@ public class OpenTelemetrySDKConfigurator {
             log.warn("GlobalOpenTelemetry already set, cannot register new SDK: {}", e.getMessage());
         }
         openTelemetry = sdk;
+        // System.out.println("[DEBUG_LOG] OpenTelemetrySDKConfigurator INITIALIZED, SDK: " + sdk + ", openTelemetry: " + openTelemetry);
+
+        if (configureLogs) {
+            LogUtils.addHighlightedConsoleLogger(org.apache.logging.log4j.Level.INFO);
+            try {
+                org.apache.logging.log4j.core.LoggerContext context = (org.apache.logging.log4j.core.LoggerContext) org.apache.logging.log4j.LogManager.getContext(false);
+                if (context.getConfiguration().getAppender("OpenTelemetryAppender") != null) {
+                    context.getConfiguration().getAppenders().remove("OpenTelemetryAppender");
+                }
+
+                Class<?> appenderClass = Class.forName("io.opentelemetry.instrumentation.log4j.appender.v2_17.OpenTelemetryAppender");
+                var builderMethod = appenderClass.getMethod("builder");
+                var builder = builderMethod.invoke(null);
+                builder.getClass().getMethod("setName", String.class).invoke(builder, "OpenTelemetryAppender");
+                // Set the OpenTelemetry instance directly if possible
+                try {
+                     builder.getClass().getMethod("setOpenTelemetry", OpenTelemetry.class).invoke(builder, openTelemetry);
+                } catch (Exception ignore) {}
+
+                org.apache.logging.log4j.core.Appender appender = (org.apache.logging.log4j.core.Appender) builder.getClass().getMethod("build").invoke(builder);
+                LogUtils.addAppender(appender, org.apache.logging.log4j.Level.ALL);
+                log.info("OpenTelemetry Log4j2 Appender registered.");
+            } catch (Exception e) {
+                log.warn("Could not register OpenTelemetry Log4j2 Appender. Ensure opentelemetry-log4j-appender is on classpath.", e);
+            }
+        }
         ServiceLoader<GuiceTelemetryRegistration> registrations = ServiceLoader.load(GuiceTelemetryRegistration.class);
         for (GuiceTelemetryRegistration registration : registrations) {
              openTelemetry = registration.configure(openTelemetry);
@@ -144,12 +196,15 @@ public class OpenTelemetrySDKConfigurator {
     }
 
     public static synchronized void reset() {
+        // log.debug("OpenTelemetrySDKConfigurator RESET", new RuntimeException("Reset Stack Trace"));
         if (openTelemetry instanceof OpenTelemetrySdk) {
             ((OpenTelemetrySdk) openTelemetry).close();
         }
         openTelemetry = null;
         inMemorySpanExporter = null;
         inMemoryLogRecordExporter = null;
+        System.clearProperty("OTEL_EXPORTER_OTLP_ENDPOINT");
+        System.clearProperty("io.opentelemetry.exporter.internal.http.HttpSenderProvider");
         TelemetryPreStartup.reset();
         try {
             GlobalOpenTelemetry.resetForTest();
@@ -163,5 +218,10 @@ public class OpenTelemetrySDKConfigurator {
         } catch (Exception e) {
              // ignore
         }
+        // System.out.println("[DEBUG_LOG] OpenTelemetrySDKConfigurator RESET");
+    }
+
+    public static boolean isReset() {
+        return openTelemetry == null;
     }
 }

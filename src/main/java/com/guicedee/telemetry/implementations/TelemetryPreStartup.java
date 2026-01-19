@@ -16,6 +16,10 @@ public class TelemetryPreStartup implements IGuicePreStartup<TelemetryPreStartup
     @Getter
     private static TelemetryOptions options;
 
+    public static void setOptions(TelemetryOptions options) {
+        TelemetryPreStartup.options = options;
+    }
+
     public static void reset() {
         options = null;
     }
@@ -23,7 +27,7 @@ public class TelemetryPreStartup implements IGuicePreStartup<TelemetryPreStartup
     @Override
     public List<Future<Boolean>> onStartup() {
         if (options != null) {
-            log.debug("Telemetry options already set, initializing SDK");
+            log.debug("Telemetry options already set, skipping discovery");
             OpenTelemetrySDKConfigurator.initialize();
             return List.of(Future.succeededFuture(true));
         }
@@ -34,7 +38,63 @@ public class TelemetryPreStartup implements IGuicePreStartup<TelemetryPreStartup
         if (!classes.isEmpty()) {
             for (var clazzRef : classes) {
                 if (!clazzRef.getName().contains("TelemetryOptionsTest")) {
-                    options = clazzRef.loadClass().getAnnotation(TelemetryOptions.class);
+                    TelemetryOptions telOptions = clazzRef.loadClass().getAnnotation(TelemetryOptions.class);
+                    options = new TelemetryOptions() {
+                        @Override
+                        public Class<? extends java.lang.annotation.Annotation> annotationType() {
+                            return TelemetryOptions.class;
+                        }
+
+                        @Override
+                        public boolean enabled() {
+                            return Boolean.parseBoolean(com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_ENABLED", String.valueOf(telOptions.enabled())));
+                        }
+
+                        @Override
+                        public String serviceName() {
+                            return com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_SERVICE_NAME", telOptions.serviceName());
+                        }
+
+                        @Override
+                        public String otlpEndpoint() {
+                            return com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_OTLP_ENDPOINT", telOptions.otlpEndpoint());
+                        }
+
+                        @Override
+                        public boolean useInMemoryExporters() {
+                            return Boolean.parseBoolean(com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_USE_IN_MEMORY", String.valueOf(telOptions.useInMemoryExporters())));
+                        }
+
+                        @Override
+                        public boolean configureLogs() {
+                            return Boolean.parseBoolean(com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_CONFIGURE_LOGS", String.valueOf(telOptions.configureLogs())));
+                        }
+
+                        @Override
+                        public String serviceVersion() {
+                            return com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_SERVICE_VERSION", telOptions.serviceVersion());
+                        }
+
+                        @Override
+                        public String deploymentEnvironment() {
+                            return com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_DEPLOYMENT_ENVIRONMENT", telOptions.deploymentEnvironment());
+                        }
+
+                        @Override
+                        public int maxBatchSize() {
+                            return Integer.parseInt(com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_MAX_BATCH_SIZE", String.valueOf(telOptions.maxBatchSize())));
+                        }
+
+                        @Override
+                        public int maxLogBatchSize() {
+                            return Integer.parseInt(com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_MAX_LOG_BATCH_SIZE", String.valueOf(telOptions.maxLogBatchSize())));
+                        }
+
+                        @Override
+                        public boolean logSignals() {
+                            return Boolean.parseBoolean(com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_LOG_SIGNALS", String.valueOf(telOptions.logSignals())));
+                        }
+                    };
                     break;
                 }
             }
@@ -76,27 +136,52 @@ public class TelemetryPreStartup implements IGuicePreStartup<TelemetryPreStartup
 
                     @Override
                     public boolean enabled() {
-                        return tel.enabled();
+                        return Boolean.parseBoolean(com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_ENABLED", String.valueOf(tel.enabled())));
                     }
 
                     @Override
                     public String serviceName() {
-                        return tel.serviceName();
+                        return com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_SERVICE_NAME", tel.serviceName());
                     }
 
                     @Override
                     public String otlpEndpoint() {
-                        return tel.otlpEndpoint();
+                        return com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_OTLP_ENDPOINT", tel.otlpEndpoint());
                     }
 
                     @Override
                     public boolean useInMemoryExporters() {
-                        return tel.useInMemoryExporters();
+                        return Boolean.parseBoolean(com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_USE_IN_MEMORY", String.valueOf(tel.useInMemoryExporters())));
                     }
 
                     @Override
                     public boolean configureLogs() {
-                        return tel.configureLogs();
+                        return Boolean.parseBoolean(com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_CONFIGURE_LOGS", String.valueOf(tel.configureLogs())));
+                    }
+
+                    @Override
+                    public String serviceVersion() {
+                        return com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_SERVICE_VERSION", "1.0.0");
+                    }
+
+                    @Override
+                    public String deploymentEnvironment() {
+                        return com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_DEPLOYMENT_ENVIRONMENT", "production");
+                    }
+
+                    @Override
+                    public int maxBatchSize() {
+                        return Integer.parseInt(com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_MAX_BATCH_SIZE", "512"));
+                    }
+
+                    @Override
+                    public int maxLogBatchSize() {
+                        return Integer.parseInt(com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_MAX_LOG_BATCH_SIZE", "512"));
+                    }
+
+                    @Override
+                    public boolean logSignals() {
+                        return Boolean.parseBoolean(com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_LOG_SIGNALS", String.valueOf(tel.logSignals())));
                     }
                 };
             }
