@@ -6,7 +6,7 @@ open module guiced.telemetry.test {
     requires com.google.guice;
     requires com.guicedee.client;
     requires com.google.common;
-    requires com.guicedee.services.opentelemetry;
+    requires com.guicedee.modules.services.opentelemetry;
 
     requires com.guicedee.health;
 

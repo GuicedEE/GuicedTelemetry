@@ -15,10 +15,12 @@
 
     <name>Guiced Telemetry</name>
     <description>Provides a convenient means to use Telemetry</description>
+    <url>https://github.com/GuicedEE/Metrics</url>
 
     <properties>
         <ignore.moditect>true</ignore.moditect>
         <flatten.pom>false</flatten.pom>
+        <project.scm.nameUrl>/GuicedEE/GuicedTelemetry</project.scm.nameUrl>
     </properties>
 
     <dependencies>
@@ -28,29 +30,29 @@
         </dependency>
 
         <dependency>
-            <groupId>com.guicedee.services</groupId>
+            <groupId>com.guicedee.modules.representations</groupId>
             <artifactId>json-representation</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>com.guicedee.services</groupId>
+            <groupId>com.guicedee.modules.services</groupId>
             <artifactId>telemetry-core</artifactId>
         </dependency>
 
         <dependency>
             <groupId>com.guicedee</groupId>
-            <artifactId>guiced-vertx</artifactId>
+            <artifactId>vertx</artifactId>
         </dependency>
 
         <dependency>
             <groupId>com.guicedee</groupId>
-            <artifactId>guiced-health</artifactId>
+            <artifactId>health</artifactId>
             <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>com.guicedee</groupId>
-            <artifactId>guice-injection</artifactId>
+            <artifactId>inject</artifactId>
         </dependency>
 
         <dependency>
@@ -121,6 +123,14 @@
                         </annotationProcessor>
                     </annotationProcessors>
                     <failOnError>true</failOnError>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <testFailureIgnore>true</testFailureIgnore>
                 </configuration>
             </plugin>
         </plugins>

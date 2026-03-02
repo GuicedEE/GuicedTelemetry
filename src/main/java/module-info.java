@@ -9,7 +9,7 @@ import com.guicedee.telemetry.implementations.TelemetryPreStartup;
 
 module com.guicedee.telemetry {
     requires transitive com.guicedee.vertx;
-    requires transitive com.guicedee.services.opentelemetry;
+    requires transitive com.guicedee.modules.services.opentelemetry;
     requires transitive com.guicedee.guicedinjection;
     requires transitive aopalliance;
     requires transitive org.apache.logging.log4j.core;
