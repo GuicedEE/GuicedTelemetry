@@ -1,4 +1,4 @@
-name: GuicedEE Telemetry Library
+name: GuicedEE Telemetry
 on:
   workflow_dispatch:
     inputs:
