@@ -28,23 +28,21 @@ public class TraceMethodInterceptor implements MethodInterceptor {
 
     private static final Key<Span> SPAN_KEY = Key.get(Span.class);
 
-    private final Tracer tracer;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public TraceMethodInterceptor() {
-        this(OpenTelemetrySDKConfigurator.getOpenTelemetry());
     }
 
     public TraceMethodInterceptor(OpenTelemetry openTelemetry) {
-        this.tracer = openTelemetry.getTracer("com.guicedee.telemetry.trace");
+    }
+
+    private Tracer getTracer() {
+        return OpenTelemetrySDKConfigurator.getOpenTelemetry().getTracer("com.guicedee.telemetry.trace");
     }
 
     @Override
     public Object invoke(MethodInvocation invocation) throws Throwable {
-        Tracer actualTracer = tracer;
-        if (actualTracer == null || OpenTelemetrySDKConfigurator.isReset()) {
-            actualTracer = OpenTelemetrySDKConfigurator.getOpenTelemetry().getTracer("com.guicedee.telemetry.trace");
-        }
+        Tracer actualTracer = getTracer();
         Method method = invocation.getMethod();
         String spanName = resolveSpanName(method);
 

@@ -21,7 +21,7 @@ jobs:
     uses: GuicedEE/Workflows/.github/workflows/projects.yml@master
     with:
       baseDir: ''
-      name: 'Guiced Telemtry'
+      name: 'Guiced Telemetry'
       sonarProjectName: 'GuicedEE_GuicedTelemetry'
       sonarOrganization: 'guicedee'
       skipDeploy: 'true'
@@ -34,7 +34,7 @@ jobs:
     uses: GuicedEE/Workflows/.github/workflows/projects.yml@master
     with:
       baseDir: ''
-      name: 'Guiced Telemtry'
+      name: 'Guiced Telemetry'
       sonarProjectName: 'GuicedEE_GuicedTelemetry'
       sonarOrganization: 'guicedee'
       publishToCentral: ${{inputs.centralRelease}}

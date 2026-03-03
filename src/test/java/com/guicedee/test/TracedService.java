@@ -22,7 +22,7 @@ public class TracedService{
 
     @Trace("AttributeSpan")
     @SpanAttribute("my_result")
-    public String methodWithAttributes(@SpanAttribute("param1") String p1, @SpanAttribute int p2, Object complex) {
+    public String methodWithAttributes(@SpanAttribute("param1") String p1, @SpanAttribute("p2") int p2, Object complex) {
         return "Hello " + p1 + " " + p2;
     }
 
@@ -35,7 +35,7 @@ public class TracedService{
     @Trace("NestedOuter")
     public Uni<String> nestedOuter() {
         return Uni.createFrom().item("start")
-                .chain(s -> nestedInner());
+                .chain(s -> com.guicedee.client.IGuiceContext.get(TracedService.class).nestedInner());
     }
 
     @Trace("NestedInner")
