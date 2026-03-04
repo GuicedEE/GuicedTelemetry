@@ -26,6 +26,8 @@ public @interface Trace {
     /**
      * Optional span name override. If empty, a sensible default will be used
      * based on the declaring class and method name.
+     *
+     * @return the span name, or empty string for default
      */
     String value() default "";
 }

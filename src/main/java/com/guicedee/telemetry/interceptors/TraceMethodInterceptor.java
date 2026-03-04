@@ -30,16 +30,32 @@ public class TraceMethodInterceptor implements MethodInterceptor {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    /**
+     * Creates a new trace method interceptor.
+     */
     public TraceMethodInterceptor() {
     }
 
+    /**
+     * Creates a new trace method interceptor with the given OpenTelemetry instance.
+     *
+     * @param openTelemetry the OpenTelemetry instance (currently unused, kept for API compatibility)
+     */
     public TraceMethodInterceptor(OpenTelemetry openTelemetry) {
     }
 
+    /**
+     * Returns the tracer used for creating spans.
+     *
+     * @return the OpenTelemetry tracer
+     */
     private Tracer getTracer() {
         return OpenTelemetrySDKConfigurator.getOpenTelemetry().getTracer("com.guicedee.telemetry.trace");
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Object invoke(MethodInvocation invocation) throws Throwable {
         Tracer actualTracer = getTracer();
@@ -99,6 +115,16 @@ public class TraceMethodInterceptor implements MethodInterceptor {
         }
     }
 
+    /**
+     * Wraps a {@link Uni} result so that the span ends when the Uni completes or fails.
+     *
+     * @param span       the current span
+     * @param method     the intercepted method
+     * @param uni        the Uni result to wrap
+     * @param callScoper the current call scoper
+     * @param parentSpan the parent span, or {@code null}
+     * @return the wrapped Uni
+     */
     private Uni<?> wrapUni(Span span, Method method, Uni<?> uni, CallScoper callScoper, Span parentSpan) {
         return uni.onItemOrFailure().invoke((item, failure) -> {
             try (var scope = span.makeCurrent()) {
@@ -121,6 +147,13 @@ public class TraceMethodInterceptor implements MethodInterceptor {
         });
     }
 
+    /**
+     * Records method parameters annotated with {@link SpanAttribute} on the span.
+     *
+     * @param span   the span to record attributes on
+     * @param method the intercepted method
+     * @param args   the method arguments
+     */
     private void recordAttributes(Span span, Method method, Object[] args) {
         Parameter[] parameters = method.getParameters();
         for (int i = 0; i < parameters.length; i++) {
@@ -132,6 +165,13 @@ public class TraceMethodInterceptor implements MethodInterceptor {
         }
     }
 
+    /**
+     * Records the method return value as a span attribute if annotated with {@link SpanAttribute}.
+     *
+     * @param span   the span to record the attribute on
+     * @param method the intercepted method
+     * @param result the method return value
+     */
     private void recordReturnAttribute(Span span, Method method, Object result) {
         SpanAttribute attr = method.getAnnotation(SpanAttribute.class);
         if (attr != null) {
@@ -140,6 +180,13 @@ public class TraceMethodInterceptor implements MethodInterceptor {
         }
     }
 
+    /**
+     * Sets a typed attribute on the span, converting complex objects to JSON.
+     *
+     * @param span  the span to set the attribute on
+     * @param name  the attribute name
+     * @param value the attribute value
+     */
     private void setAttribute(Span span, String name, Object value) {
         if (value == null) {
             span.setAttribute(name, "null");
@@ -168,6 +215,12 @@ public class TraceMethodInterceptor implements MethodInterceptor {
         }
     }
 
+    /**
+     * Resolves the span name from the {@link Trace} annotation or falls back to class and method name.
+     *
+     * @param method the intercepted method
+     * @return the span name
+     */
     private String resolveSpanName(Method method) {
         Trace trace = method.getAnnotation(Trace.class);
         if (trace == null) {

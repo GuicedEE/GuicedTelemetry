@@ -26,6 +26,12 @@ import lombok.extern.log4j.Log4j2;
 
 import java.util.ServiceLoader;
 
+/**
+ * Configures and initializes the OpenTelemetry SDK based on {@link TelemetryOptions}.
+ *
+ * <p>Supports OTLP HTTP exporters for production and in-memory exporters for testing.
+ * The SDK is initialized once and made available via {@link #getOpenTelemetry()}.</p>
+ */
 @Log4j2
 public class OpenTelemetrySDKConfigurator {
 
@@ -36,6 +42,12 @@ public class OpenTelemetrySDKConfigurator {
     @Getter
     private static InMemoryLogRecordExporter inMemoryLogRecordExporter;
 
+    /**
+     * Initializes the OpenTelemetry SDK if not already initialized.
+     *
+     * <p>Reads configuration from {@link TelemetryPreStartup#getOptions()},
+     * creates exporters, tracer and logger providers, and registers SPI hooks.</p>
+     */
     public static synchronized void initialize() {
         if (openTelemetry != null) {
             return;
@@ -188,6 +200,11 @@ public class OpenTelemetrySDKConfigurator {
         log.info("OpenTelemetry SDK initialized for service: {}", serviceName);
     }
 
+    /**
+     * Returns the configured OpenTelemetry instance, initializing it if necessary.
+     *
+     * @return the OpenTelemetry instance
+     */
     public static OpenTelemetry getOpenTelemetry() {
         if (openTelemetry == null) {
             initialize();
@@ -195,6 +212,9 @@ public class OpenTelemetrySDKConfigurator {
         return openTelemetry;
     }
 
+    /**
+     * Shuts down and resets the OpenTelemetry SDK, clearing all state.
+     */
     public static synchronized void reset() {
         // log.debug("OpenTelemetrySDKConfigurator RESET", new RuntimeException("Reset Stack Trace"));
         if (openTelemetry instanceof OpenTelemetrySdk) {
@@ -221,6 +241,11 @@ public class OpenTelemetrySDKConfigurator {
         // System.out.println("[DEBUG_LOG] OpenTelemetrySDKConfigurator RESET");
     }
 
+    /**
+     * Returns whether the SDK has been reset (i.e. not currently initialized).
+     *
+     * @return {@code true} if the SDK is not initialized
+     */
     public static boolean isReset() {
         return openTelemetry == null;
     }

@@ -11,6 +11,8 @@ import java.lang.annotation.*;
 public @interface SpanAttribute {
     /**
      * The name of the attribute. If empty, the parameter name or "return_value" will be used.
+     *
+     * @return the attribute name, or empty string for default
      */
     String value() default "";
 }

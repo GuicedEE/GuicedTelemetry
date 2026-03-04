@@ -13,6 +13,9 @@ import io.opentelemetry.api.OpenTelemetry;
  */
 public class DefaultTelemetryRegistration implements GuiceTelemetryRegistration<DefaultTelemetryRegistration> {
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public OpenTelemetry configure(OpenTelemetry openTelemetry) {
         // No-op configuration by default; projects can override via their own SPI implementation

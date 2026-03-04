@@ -10,20 +10,37 @@ import lombok.extern.log4j.Log4j2;
 
 import java.util.List;
 
+/**
+ * Pre-startup hook that discovers {@link TelemetryOptions} or {@link Telemetry}
+ * annotations from the classpath and initializes the OpenTelemetry SDK.
+ */
 @Log4j2
 public class TelemetryPreStartup implements IGuicePreStartup<TelemetryPreStartup> {
 
     @Getter
     private static TelemetryOptions options;
 
+    /**
+     * Sets the telemetry options programmatically.
+     *
+     * @param options the telemetry options to use
+     */
     public static void setOptions(TelemetryOptions options) {
         TelemetryPreStartup.options = options;
     }
 
+    /**
+     * Resets the telemetry options to {@code null}.
+     */
     public static void reset() {
         options = null;
     }
 
+    /**
+     * Discovers telemetry configuration and initializes the OpenTelemetry SDK.
+     *
+     * @return a list of futures representing startup completion
+     */
     @Override
     public List<Future<Boolean>> onStartup() {
         if (options != null) {
@@ -190,6 +207,11 @@ public class TelemetryPreStartup implements IGuicePreStartup<TelemetryPreStartup
         return List.of(Future.succeededFuture(true));
     }
 
+    /**
+     * Returns the sort order for this pre-startup hook.
+     *
+     * @return the sort order value
+     */
     @Override
     public Integer sortOrder() {
         // Run before VertXPreStartup if possible, or at least before it builds Vertx

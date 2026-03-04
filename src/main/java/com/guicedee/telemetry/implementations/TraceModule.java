@@ -11,6 +11,9 @@ import com.guicedee.telemetry.interceptors.TraceMethodInterceptor;
  * method annotated with {@link Trace}.
  */
 public class TraceModule extends AbstractModule implements IGuiceModule<TraceModule> {
+    /**
+     * Binds the trace interceptor to classes and methods annotated with {@link Trace}.
+     */
     @Override
     protected void configure() {
         if (TelemetryPreStartup.getOptions() != null && !TelemetryPreStartup.getOptions().enabled()) {

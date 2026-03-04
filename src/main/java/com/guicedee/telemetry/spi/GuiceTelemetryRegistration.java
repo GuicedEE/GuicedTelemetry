@@ -12,6 +12,9 @@ public interface GuiceTelemetryRegistration<J extends GuiceTelemetryRegistration
     /**
      * Allow implementations to customize or wrap the provided OpenTelemetry instance.
      * Return the instance to be used by the application (may be the same instance).
+     *
+     * @param openTelemetry the OpenTelemetry instance to configure or wrap
+     * @return the OpenTelemetry instance to use
      */
     OpenTelemetry configure(OpenTelemetry openTelemetry);
 }
