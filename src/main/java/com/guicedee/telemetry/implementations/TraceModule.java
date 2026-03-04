@@ -12,6 +12,12 @@ import com.guicedee.telemetry.interceptors.TraceMethodInterceptor;
  */
 public class TraceModule extends AbstractModule implements IGuiceModule<TraceModule> {
     /**
+     * Creates a new trace module.
+     */
+    public TraceModule() {
+    }
+
+    /**
      * Binds the trace interceptor to classes and methods annotated with {@link Trace}.
      */
     @Override

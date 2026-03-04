@@ -17,6 +17,12 @@ import java.util.List;
 @Log4j2
 public class TelemetryPreStartup implements IGuicePreStartup<TelemetryPreStartup> {
 
+    /**
+     * Creates a new telemetry pre-startup handler.
+     */
+    public TelemetryPreStartup() {
+    }
+
     @Getter
     private static TelemetryOptions options;
 

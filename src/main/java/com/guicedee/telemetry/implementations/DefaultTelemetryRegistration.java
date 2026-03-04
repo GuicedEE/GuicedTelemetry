@@ -14,6 +14,12 @@ import io.opentelemetry.api.OpenTelemetry;
 public class DefaultTelemetryRegistration implements GuiceTelemetryRegistration<DefaultTelemetryRegistration> {
 
     /**
+     * Creates a new default telemetry registration.
+     */
+    public DefaultTelemetryRegistration() {
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override

@@ -12,6 +12,12 @@ public class GuiceTelemetryModuleInclusions
 		implements IGuiceScanModuleInclusions<GuiceTelemetryModuleInclusions>
 {
 	/**
+	 * Creates a new module inclusions instance.
+	 */
+	public GuiceTelemetryModuleInclusions() {
+	}
+
+	/**
 	 * {@inheritDoc}
 	 */
 	@Override

@@ -8,4 +8,9 @@ import com.guicedee.vertx.spi.Verticle;
 @Verticle(value = "guiced-telemetry")
 public class GuicedTelemetry {
 
+    /**
+     * Creates a new GuicedTelemetry instance.
+     */
+    public GuicedTelemetry() {
+    }
 }

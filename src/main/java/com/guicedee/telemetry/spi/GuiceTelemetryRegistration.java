@@ -6,6 +6,8 @@ import io.opentelemetry.api.OpenTelemetry;
 /**
  * SPI for telemetry registration hooks.
  * Implementations may customize or initialize the OpenTelemetry instance.
+ *
+ * @param <J> the implementing type for fluent use
  */
 public interface GuiceTelemetryRegistration<J extends GuiceTelemetryRegistration<J>> extends IDefaultService<J>
 {

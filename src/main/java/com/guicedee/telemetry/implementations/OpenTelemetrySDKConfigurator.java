@@ -35,6 +35,12 @@ import java.util.ServiceLoader;
 @Log4j2
 public class OpenTelemetrySDKConfigurator {
 
+    /**
+     * Private constructor — utility class.
+     */
+    private OpenTelemetrySDKConfigurator() {
+    }
+
     private static OpenTelemetry openTelemetry;
 
     @Getter
@@ -45,7 +51,7 @@ public class OpenTelemetrySDKConfigurator {
     /**
      * Initializes the OpenTelemetry SDK if not already initialized.
      *
-     * <p>Reads configuration from {@link TelemetryPreStartup#getOptions()},
+     * <p>Reads configuration from {@link TelemetryPreStartup},
      * creates exporters, tracer and logger providers, and registers SPI hooks.</p>
      */
     public static synchronized void initialize() {
