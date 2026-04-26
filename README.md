@@ -2,7 +2,7 @@
 
 [![Build](https://github.com/GuicedEE/GuicedTelemetry/actions/workflows/build.yml/badge.svg)](https://github.com/GuicedEE/GuicedTelemetry/actions/workflows/build.yml)
 [![Maven Central](https://img.shields.io/maven-central/v/com.guicedee/guiced-telemetry)](https://central.sonatype.com/artifact/com.guicedee/guiced-telemetry)
-[![Maven Snapshot](https://img.shields.io/nexus/s/com.guicedee/guiced-telemetry?server=https%3A%2F%2Foss.sonatype.org&label=Maven%20Snapshot)](https://oss.sonatype.org/content/repositories/snapshots/com/guicedee/guiced-telemetry/)
+[![Snapshot](https://img.shields.io/badge/Snapshot-2.0.0-SNAPSHOT-orange)](https://github.com/GuicedEE/Packages/packages/maven/com.guicedee.guiced-telemetry)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue)](https://www.apache.org/licenses/LICENSE-2.0)
 
 ![Java 25+](https://img.shields.io/badge/Java-25%2B-green)
@@ -98,25 +98,43 @@ No JPMS `provides` declarations are needed for consuming code — the module is 
 
 ## 📐 Startup Flow
 
-```
-IGuiceContext.instance()
- └─ IGuicePreStartup hooks
-     └─ TelemetryPreStartup.onStartup() (sortOrder = MIN_VALUE + 35)
-         ├─ Scan for @TelemetryOptions or @Telemetry annotation
-         ├─ Resolve environment variable overrides
-         └─ OpenTelemetrySDKConfigurator.initialize()
-             ├─ Build Resource (service.name, service.version, deployment.environment, host.name)
-             ├─ Create SpanExporter (OTLP HTTP or InMemory)
-             ├─ Create LogRecordExporter (OTLP HTTP or InMemory)
-             ├─ Build SdkTracerProvider with BatchSpanProcessor
-             ├─ Build SdkLoggerProvider with BatchLogRecordProcessor
-             ├─ Set GlobalOpenTelemetry
-             ├─ Register Log4j2 OpenTelemetry Appender (if configureLogs)
-             ├─ Invoke GuiceTelemetryRegistration SPI
-             └─ Register JVM shutdown hook
- └─ Guice injector created
-     └─ TraceModule.configure()
-         └─ Bind TraceMethodInterceptor for @Trace (class-level and method-level)
+```mermaid
+flowchart TD
+    n1["IGuiceContext.instance()"]
+    n2["IGuicePreStartup hooks"]
+    n1 --> n2
+    n3["TelemetryPreStartup.onStartup()<br/>sortOrder = MIN_VALUE + 35"]
+    n2 --> n3
+    n4["Scan for @TelemetryOptions or @Telemetry annotation"]
+    n3 --> n4
+    n5["Resolve environment variable overrides"]
+    n3 --> n5
+    n6["OpenTelemetrySDKConfigurator.initialize()"]
+    n3 --> n6
+    n7["Build Resource<br/>service.name, service.version, deployment.environment, host.name"]
+    n6 --> n7
+    n8["Create SpanExporter<br/>OTLP HTTP or InMemory"]
+    n6 --> n8
+    n9["Create LogRecordExporter<br/>OTLP HTTP or InMemory"]
+    n6 --> n9
+    n10["Build SdkTracerProvider with BatchSpanProcessor"]
+    n6 --> n10
+    n11["Build SdkLoggerProvider with BatchLogRecordProcessor"]
+    n6 --> n11
+    n12["Set GlobalOpenTelemetry"]
+    n6 --> n12
+    n13["Register Log4j2 OpenTelemetry Appender<br/>if configureLogs"]
+    n6 --> n13
+    n14["Invoke GuiceTelemetryRegistration SPI"]
+    n6 --> n14
+    n15["Register JVM shutdown hook"]
+    n6 --> n15
+    n16["Guice injector created"]
+    n1 --> n16
+    n17["TraceModule.configure()"]
+    n16 --> n17
+    n18["Bind TraceMethodInterceptor for @Trace<br/>class-level and method-level"]
+    n17 --> n18
 ```
 
 ## 🔍 Tracing Annotations
@@ -338,15 +356,16 @@ The included `docker/tempo.yaml` configures:
 
 ## 🗺️ Module Graph
 
-```
-com.guicedee.telemetry
- ├── com.guicedee.guicedinjection        (GuicedEE runtime — scanning, Guice, lifecycle)
- ├── com.guicedee.vertx                  (Vert.x lifecycle — Verticle support)
- ├── com.guicedee.client                 (GuicedEE SPI contracts — CallScoper, Environment)
- ├── com.guicedee.modules.services.opentelemetry  (OpenTelemetry API + SDK + OTLP exporters)
- ├── aopalliance                         (AOP Alliance — MethodInterceptor)
- ├── org.apache.logging.log4j.core       (Log4j2 — OpenTelemetry appender integration)
- └── com.guicedee.health                 (optional — MicroProfile Health integration)
+```mermaid
+flowchart LR
+    com_guicedee_telemetry["com.guicedee.telemetry"]
+    com_guicedee_telemetry --> com_guicedee_guicedinjection["com.guicedee.guicedinjection<br/>GuicedEE runtime — scanning, Guice, lifecycle"]
+    com_guicedee_telemetry --> com_guicedee_vertx["com.guicedee.vertx<br/>Vert.x lifecycle — Verticle support"]
+    com_guicedee_telemetry --> com_guicedee_client["com.guicedee.client<br/>GuicedEE SPI contracts — CallScoper, Environment"]
+    com_guicedee_telemetry --> com_guicedee_modules_services_opentelemetry["com.guicedee.modules.services.opentelemetry<br/>OpenTelemetry API + SDK + OTLP exporters"]
+    com_guicedee_telemetry --> aopalliance["aopalliance<br/>AOP Alliance — MethodInterceptor"]
+    com_guicedee_telemetry --> org_apache_logging_log4j_core["org.apache.logging.log4j.core<br/>Log4j2 — OpenTelemetry appender integration"]
+    com_guicedee_telemetry --> com_guicedee_health["com.guicedee.health<br/>optional — MicroProfile Health integration"]
 ```
 
 ## 🧩 JPMS
