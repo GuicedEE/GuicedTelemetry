@@ -28,7 +28,7 @@ Built on [OpenTelemetry SDK](https://opentelemetry.io/docs/languages/java/) · [
 <summary>Gradle (Kotlin DSL)</summary>
 
 ```kotlin
-implementation("com.guicedee:guiced-telemetry:2.0.0-RC10")
+implementation("com.guicedee:guiced-telemetry:2.0.0-RC11")
 ```
 </details>
 
