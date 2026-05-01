@@ -2,13 +2,11 @@
 
 [![Build](https://github.com/GuicedEE/GuicedTelemetry/actions/workflows/build.yml/badge.svg)](https://github.com/GuicedEE/GuicedTelemetry/actions/workflows/build.yml)
 [![Maven Central](https://img.shields.io/maven-central/v/com.guicedee/guiced-telemetry)](https://central.sonatype.com/artifact/com.guicedee/guiced-telemetry)
-[![Snapshot](https://img.shields.io/badge/Snapshot-2.0.1-SNAPSHOT-SNAPSHOT-orange)](https://github.com/GuicedEE/Packages/packages/maven/com.guicedee.guiced-telemetry)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue)](https://www.apache.org/licenses/LICENSE-2.0)
 
 ![Java 25+](https://img.shields.io/badge/Java-25%2B-green)
 ![Guice 7](https://img.shields.io/badge/Guice-7%2B-green)
 ![Vert.X 5](https://img.shields.io/badge/Vert.x-5%2B-green)
-![Maven 4](https://img.shields.io/badge/Maven-4%2B-green)
 
 **OpenTelemetry distributed tracing** for [GuicedEE](https://github.com/GuicedEE) applications using **Guice AOP** and **OTLP exporters**.
 Annotate your classes and methods with `@Trace` and `@SpanAttribute` — the framework builds an `OpenTelemetrySdk` at startup, binds a `TraceMethodInterceptor` via Guice AOP, and exports spans and logs to any OTLP-compatible backend (Tempo, Jaeger, etc.) automatically.
