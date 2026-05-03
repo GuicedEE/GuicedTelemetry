@@ -26,7 +26,7 @@ Built on [OpenTelemetry SDK](https://opentelemetry.io/docs/languages/java/) · [
 <summary>Gradle (Kotlin DSL)</summary>
 
 ```kotlin
-implementation("com.guicedee:guiced-telemetry:2.0.1-SNAPSHOT")
+implementation("com.guicedee:guiced-telemetry:2.0.1")
 ```
 </details>
 
@@ -249,7 +249,7 @@ Every attribute can be overridden with a system property or environment variable
 | `TELEMETRY_OTLP_ENDPOINT` | `otlpEndpoint` | `http://tempo:4318` |
 | `TELEMETRY_USE_IN_MEMORY` | `useInMemoryExporters` | `true` |
 | `TELEMETRY_CONFIGURE_LOGS` | `configureLogs` | `false` |
-| `TELEMETRY_SERVICE_VERSION` | `serviceVersion` | `2.0.1-SNAPSHOT` |
+| `TELEMETRY_SERVICE_VERSION` | `serviceVersion` | `2.0.1` |
 | `TELEMETRY_DEPLOYMENT_ENVIRONMENT` | `deploymentEnvironment` | `staging` |
 | `TELEMETRY_MAX_BATCH_SIZE` | `maxBatchSize` | `1024` |
 | `TELEMETRY_MAX_LOG_BATCH_SIZE` | `maxLogBatchSize` | `1024` |
