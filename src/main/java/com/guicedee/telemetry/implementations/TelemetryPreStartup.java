@@ -50,7 +50,7 @@ public class TelemetryPreStartup implements IGuicePreStartup<TelemetryPreStartup
     @Override
     public List<Future<Boolean>> onStartup() {
         if (options != null) {
-            log.debug("Telemetry options already set, skipping discovery");
+            log.debug("⏭️ Telemetry options already set, skipping discovery");
             OpenTelemetrySDKConfigurator.initialize();
             return List.of(Future.succeededFuture(true));
         }
@@ -81,6 +81,21 @@ public class TelemetryPreStartup implements IGuicePreStartup<TelemetryPreStartup
                         @Override
                         public String otlpEndpoint() {
                             return com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_OTLP_ENDPOINT", telOptions.otlpEndpoint());
+                        }
+
+                        @Override
+                        public String tracesEndpoint() {
+                            return com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_TRACES_ENDPOINT", telOptions.tracesEndpoint());
+                        }
+
+                        @Override
+                        public String logsEndpoint() {
+                            return com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_LOGS_ENDPOINT", telOptions.logsEndpoint());
+                        }
+
+                        @Override
+                        public boolean exportLogs() {
+                            return Boolean.parseBoolean(com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_EXPORT_LOGS", String.valueOf(telOptions.exportLogs())));
                         }
 
                         @Override
@@ -149,7 +164,7 @@ public class TelemetryPreStartup implements IGuicePreStartup<TelemetryPreStartup
                     targetClass = telemetryClasses.getFirst().loadClass();
                 }
 
-                log.debug("Selected class for @Telemetry: {}", targetClass.getName());
+                log.debug("🎯 Selected class for @Telemetry: {}", targetClass.getName());
                 Telemetry tel = targetClass.getAnnotation(Telemetry.class);
                 options = new TelemetryOptions() {
                     @Override
@@ -170,6 +185,21 @@ public class TelemetryPreStartup implements IGuicePreStartup<TelemetryPreStartup
                     @Override
                     public String otlpEndpoint() {
                         return com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_OTLP_ENDPOINT", tel.otlpEndpoint());
+                    }
+
+                    @Override
+                    public String tracesEndpoint() {
+                        return com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_TRACES_ENDPOINT", tel.tracesEndpoint());
+                    }
+
+                    @Override
+                    public String logsEndpoint() {
+                        return com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_LOGS_ENDPOINT", tel.logsEndpoint());
+                    }
+
+                    @Override
+                    public boolean exportLogs() {
+                        return Boolean.parseBoolean(com.guicedee.client.Environment.getSystemPropertyOrEnvironment("TELEMETRY_EXPORT_LOGS", String.valueOf(tel.exportLogs())));
                     }
 
                     @Override

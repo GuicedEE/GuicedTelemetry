@@ -26,11 +26,55 @@ public @interface TelemetryOptions {
     String serviceName() default "GuicedEE-Application";
 
     /**
-     * The endpoint for the OTLP exporter.
+     * The base endpoint for the OTLP HTTP exporter.
      *
-     * @return the OTLP endpoint.
+     * <p>This is treated as a <em>base</em> URL. The correct signal sub-path
+     * ({@code /v1/traces} or {@code /v1/logs}) is appended automatically when it
+     * is not already present, so {@code http://localhost:4318} and
+     * {@code http://localhost:4318/v1/traces} both work. Per-signal overrides
+     * ({@link #tracesEndpoint()} / {@link #logsEndpoint()}) take precedence.</p>
+     *
+     * @return the OTLP base endpoint.
      */
-    String otlpEndpoint() default "http://localhost:4317";
+    String otlpEndpoint() default "http://localhost:4318";
+
+    /**
+     * Optional dedicated full endpoint for trace (span) export.
+     *
+     * <p>When set, this exact URL is used verbatim for spans (no sub-path is
+     * appended). Use this to send traces to a traces backend such as Tempo or
+     * Jaeger, e.g. {@code http://tempo:4318/v1/traces}. When blank the value is
+     * derived from {@link #otlpEndpoint()} (or the
+     * {@code OTEL_EXPORTER_OTLP_TRACES_ENDPOINT} environment variable).</p>
+     *
+     * @return the OTLP traces endpoint, or empty to derive from the base.
+     */
+    String tracesEndpoint() default "";
+
+    /**
+     * Optional dedicated full endpoint for log record export.
+     *
+     * <p>When set, this exact URL is used verbatim for logs (no sub-path is
+     * appended). Tempo and Jaeger do <strong>not</strong> accept logs, so point
+     * this at a logs-capable backend (Loki/OTel Collector), e.g.
+     * {@code http://collector:4318/v1/logs}. When blank the value is derived
+     * from {@link #otlpEndpoint()} (or the
+     * {@code OTEL_EXPORTER_OTLP_LOGS_ENDPOINT} environment variable).</p>
+     *
+     * @return the OTLP logs endpoint, or empty to derive from the base.
+     */
+    String logsEndpoint() default "";
+
+    /**
+     * Whether to export logs over OTLP at all.
+     *
+     * <p>Set to {@code false} for traces-only backends (e.g. Tempo) that return
+     * HTTP 404 on {@code /v1/logs}. When disabled, no log exporter, logger
+     * provider, or OpenTelemetry Log4j2 appender is registered.</p>
+     *
+     * @return true if OTLP log export should be configured.
+     */
+    boolean exportLogs() default true;
 
     /**
      * Whether to use in-memory exporters. Useful for testing.

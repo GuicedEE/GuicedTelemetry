@@ -144,6 +144,9 @@ public class TelemetryIntegrationTest {
             @Override public boolean enabled() { return true; }
             @Override public String serviceName() { return "LogSignalTest"; }
             @Override public String otlpEndpoint() { return "http://localhost:4317"; }
+            @Override public String tracesEndpoint() { return ""; }
+            @Override public String logsEndpoint() { return ""; }
+            @Override public boolean exportLogs() { return true; }
             @Override public boolean useInMemoryExporters() { return true; }
             @Override public boolean configureLogs() { return true; }
             @Override public String serviceVersion() { return "1.0.0"; }

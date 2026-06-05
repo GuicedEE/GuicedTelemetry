@@ -26,11 +26,32 @@ public @interface Telemetry {
     String serviceName() default "GuicedEE-Application";
 
     /**
-     * The endpoint for the OTLP exporter.
+     * The base endpoint for the OTLP exporter.
      *
-     * @return the OTLP endpoint.
+     * @return the OTLP base endpoint.
      */
-    String otlpEndpoint() default "http://localhost:4317";
+    String otlpEndpoint() default "http://localhost:4318";
+
+    /**
+     * Optional dedicated full endpoint for trace (span) export.
+     *
+     * @return the OTLP traces endpoint, or empty to derive from the base.
+     */
+    String tracesEndpoint() default "";
+
+    /**
+     * Optional dedicated full endpoint for log record export.
+     *
+     * @return the OTLP logs endpoint, or empty to derive from the base.
+     */
+    String logsEndpoint() default "";
+
+    /**
+     * Whether to export logs over OTLP. Disable for traces-only backends (e.g. Tempo).
+     *
+     * @return true if OTLP log export should be configured.
+     */
+    boolean exportLogs() default true;
 
     /**
      * Whether to use in-memory exporters. Useful for testing.
