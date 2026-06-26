@@ -1,6 +1,6 @@
 package com.guicedee.telemetry.interceptors;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.google.inject.Key;
 import com.guicedee.client.IGuiceContext;
 import com.guicedee.client.scopes.CallScoper;
