@@ -21,6 +21,13 @@ import io.opentelemetry.sdk.testing.exporter.InMemoryLogRecordExporter;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.logs.export.SimpleLogRecordProcessor;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
+import io.opentelemetry.instrumentation.log4j.appender.v2_17.OpenTelemetryAppender;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.filter.AbstractFilter;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 
@@ -207,26 +214,30 @@ public class OpenTelemetrySDKConfigurator {
                 log.info("⏭️ configureLogs=true but exportLogs=false; skipping OpenTelemetry Log4j2 appender (no OTLP log exporter configured).");
             } else {
                 try {
-                org.apache.logging.log4j.core.LoggerContext context = (org.apache.logging.log4j.core.LoggerContext) org.apache.logging.log4j.LogManager.getContext(false);
-                if (context.getConfiguration().getAppender("OpenTelemetryAppender") != null) {
-                    context.getConfiguration().getAppenders().remove("OpenTelemetryAppender");
+                    LoggerContext context = (LoggerContext) LogManager.getContext(false);
+                    removeTelemetryAppender(context);
+                    OpenTelemetryAppender appender = OpenTelemetryAppender.builder()
+                            .setName("OpenTelemetryAppender")
+                            .setOpenTelemetry(openTelemetry)
+                            .build();
+                    appender.start();
+                    var configuration = context.getConfiguration();
+                    configuration.addAppender(appender);
+                    // AppenderControl filters run BEFORE Log4j's recursion check. A filter on
+                    // the appender itself runs too late when JUL SDK diagnostics re-enter Log4j.
+                    configuration.getRootLogger().addAppender(appender, Level.ALL, new AbstractFilter() {
+                        @Override
+                        public Result filter(LogEvent event) {
+                            String logger = event.getLoggerName();
+                            return logger != null && (logger.equals("io.opentelemetry")
+                                    || logger.startsWith("io.opentelemetry.")) ? Result.DENY : Result.NEUTRAL;
+                        }
+                    });
+                    context.updateLoggers();
+                    log.info("✅ OpenTelemetry Log4j2 Appender registered.");
+                } catch (Exception e) {
+                    log.warn("⚠️ Could not register OpenTelemetry Log4j2 Appender. Ensure opentelemetry-log4j-appender is on classpath.", e);
                 }
-
-                Class<?> appenderClass = Class.forName("io.opentelemetry.instrumentation.log4j.appender.v2_17.OpenTelemetryAppender");
-                var builderMethod = appenderClass.getMethod("builder");
-                var builder = builderMethod.invoke(null);
-                builder.getClass().getMethod("setName", String.class).invoke(builder, "OpenTelemetryAppender");
-                // Set the OpenTelemetry instance directly if possible
-                try {
-                     builder.getClass().getMethod("setOpenTelemetry", OpenTelemetry.class).invoke(builder, openTelemetry);
-                } catch (Exception ignore) {}
-
-                org.apache.logging.log4j.core.Appender appender = (org.apache.logging.log4j.core.Appender) builder.getClass().getMethod("build").invoke(builder);
-                LogUtils.addAppender(appender, org.apache.logging.log4j.Level.ALL);
-                log.info("✅ OpenTelemetry Log4j2 Appender registered.");
-            } catch (Exception e) {
-                log.warn("⚠️ Could not register OpenTelemetry Log4j2 Appender. Ensure opentelemetry-log4j-appender is on classpath.", e);
-            }
             }
         }
         ServiceLoader<GuiceTelemetryRegistration> registrations = ServiceLoader.load(GuiceTelemetryRegistration.class);
@@ -253,7 +264,8 @@ public class OpenTelemetrySDKConfigurator {
      * Shuts down and resets the OpenTelemetry SDK, clearing all state.
      */
     public static synchronized void reset() {
-        // log.debug("OpenTelemetrySDKConfigurator RESET", new RuntimeException("Reset Stack Trace"));
+        // Detach first: SDK shutdown may itself emit diagnostics through JUL/Log4j.
+        removeTelemetryAppender((LoggerContext) LogManager.getContext(false));
         if (openTelemetry instanceof OpenTelemetrySdk) {
             ((OpenTelemetrySdk) openTelemetry).close();
         }
@@ -270,14 +282,31 @@ public class OpenTelemetrySDKConfigurator {
         } catch (Exception e) {
             // log.debug("Error resetting GlobalOpenTelemetry", e);
         }
-        try {
-            org.apache.logging.log4j.core.LoggerContext context = (org.apache.logging.log4j.core.LoggerContext) org.apache.logging.log4j.LogManager.getContext(false);
-            context.getConfiguration().getAppenders().remove("OpenTelemetryAppender");
-            context.updateLoggers();
-        } catch (Exception e) {
-             // ignore
-        }
         // System.out.println("[DEBUG_LOG] OpenTelemetrySDKConfigurator RESET");
+    }
+
+    private static void removeTelemetryAppender(LoggerContext context) {
+        var configuration = context.getConfiguration();
+        String name = "OpenTelemetryAppender";
+        // Remove the AppenderControls as well as the registry entry. Otherwise Log4j
+        // retains the old instance by name and silently ignores its replacement.
+        var appenders = new java.util.HashSet<Appender>();
+        Appender registered = configuration.getAppender(name);
+        if (registered != null) {
+            appenders.add(registered);
+        }
+        var loggers = new java.util.HashSet<>(configuration.getLoggers().values());
+        loggers.add(configuration.getRootLogger());
+        for (var logger : loggers) {
+            Appender attached = logger.getAppenders().get(name);
+            if (attached != null) {
+                appenders.add(attached);
+                logger.removeAppender(name);
+            }
+        }
+        configuration.getAppenders().remove(name);
+        context.updateLoggers();
+        appenders.forEach(Appender::stop);
     }
 
     /**
