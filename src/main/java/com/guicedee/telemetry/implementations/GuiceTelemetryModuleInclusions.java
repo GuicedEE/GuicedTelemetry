@@ -24,7 +24,7 @@ public class GuiceTelemetryModuleInclusions
 	public Set<String> includeModules()
 	{
 		Set<String> strings = new HashSet<>();
-		strings.add("com.guicedee.telemetry");
+		//strings.add("com.guicedee.telemetry");
 		return strings;
 	}
 

@@ -4,6 +4,7 @@ import com.guicedee.telemetry.annotations.SpanAttribute;
 import com.guicedee.telemetry.annotations.Telemetry;
 import com.guicedee.telemetry.annotations.Trace;
 import io.smallrye.mutiny.Uni;
+import io.vertx.core.Future;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -41,5 +42,11 @@ public class TracedService{
     @Trace("NestedInner")
     public Uni<String> nestedInner() {
         return Uni.createFrom().item("inner");
+    }
+
+    @Trace("FutureSpan")
+    @SpanAttribute("future_result")
+    public Future<String> futureMethod() {
+        return Future.succeededFuture("future");
     }
 }

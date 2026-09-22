@@ -136,6 +136,19 @@ public class TelemetryIntegrationTest {
     }
 
     @Test
+    public void testFutureTracing() {
+        TracedService service = IGuiceContext.get(TracedService.class);
+
+        assertEquals("future", service.futureMethod().toCompletionStage().toCompletableFuture().join());
+
+        SpanData span = spanExporter.getFinishedSpanItems().stream()
+                .filter(s -> s.getName().equals("FutureSpan"))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("future", span.getAttributes().get(AttributeKey.stringKey("future_result")));
+    }
+
+    @Test
     public void testLogSignalsConfig() {
         OpenTelemetrySDKConfigurator.reset();
         // Custom options with logSignals = true

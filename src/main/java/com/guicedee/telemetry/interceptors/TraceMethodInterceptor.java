@@ -1,24 +1,24 @@
 package com.guicedee.telemetry.interceptors;
 
-import tools.jackson.databind.ObjectMapper;
 import com.google.inject.Key;
 import com.guicedee.client.IGuiceContext;
 import com.guicedee.client.scopes.CallScoper;
+import com.guicedee.modules.services.jsonrepresentation.IJsonRepresentation;
 import com.guicedee.telemetry.annotations.SpanAttribute;
 import com.guicedee.telemetry.annotations.Trace;
+import com.guicedee.telemetry.GuicedTelemetry;
 import com.guicedee.telemetry.implementations.OpenTelemetrySDKConfigurator;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.*;
 import io.opentelemetry.context.Context;
 import io.smallrye.mutiny.Uni;
-import io.smallrye.mutiny.infrastructure.Infrastructure;
+import io.vertx.core.Future;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
+import tools.jackson.databind.ObjectMapper;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.util.Map;
-import java.util.function.BiConsumer;
 
 /**
  * A simple Guice AOP interceptor that creates an OpenTelemetry span for methods
@@ -27,8 +27,7 @@ import java.util.function.BiConsumer;
 public class TraceMethodInterceptor implements MethodInterceptor {
 
     private static final Key<Span> SPAN_KEY = Key.get(Span.class);
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = IJsonRepresentation.getObjectMapper();
 
     /**
      * Creates a new trace method interceptor.
@@ -84,34 +83,20 @@ public class TraceMethodInterceptor implements MethodInterceptor {
         try (var scope = span.makeCurrent()) {
             recordAttributes(span, method, invocation.getArguments());
             Object result = invocation.proceed();
-            if (result instanceof Uni<?>) {
-                return wrapUni(span, method, (Uni<?>) result, callScoper, parentSpan);
+            if (result instanceof Uni<?> uni) {
+                return wrapUni(span, method, uni, callScoper, parentSpan);
+            }
+            if (result instanceof Future<?> future) {
+                return wrapFuture(span, method, future, callScoper, parentSpan);
             }
             recordReturnAttribute(span, method, result);
+            span.end();
+            restoreParent(callScoper, parentSpan);
             return result;
         } catch (Throwable t) {
-            span.recordException(t);
-            span.setStatus(StatusCode.ERROR, t.getMessage() == null ? "error" : t.getMessage());
-            span.end();
-            if (callScoper.isStartedScope()) {
-                if (parentSpan != null) {
-                    callScoper.getValues().put(SPAN_KEY, parentSpan);
-                } else {
-                    callScoper.getValues().remove(SPAN_KEY);
-                }
-            }
+            GuicedTelemetry.end(span, t);
+            restoreParent(callScoper, parentSpan);
             throw t;
-        } finally {
-            if (!Uni.class.isAssignableFrom(method.getReturnType())) {
-                span.end();
-                if (callScoper.isStartedScope()) {
-                    if (parentSpan != null) {
-                        callScoper.getValues().put(SPAN_KEY, parentSpan);
-                    } else {
-                        callScoper.getValues().remove(SPAN_KEY);
-                    }
-                }
-            }
         }
     }
 
@@ -126,25 +111,38 @@ public class TraceMethodInterceptor implements MethodInterceptor {
      * @return the wrapped Uni
      */
     private Uni<?> wrapUni(Span span, Method method, Uni<?> uni, CallScoper callScoper, Span parentSpan) {
-        return uni.onItemOrFailure().invoke((item, failure) -> {
-            try (var scope = span.makeCurrent()) {
-                if (failure != null) {
-                    span.recordException(failure);
-                    span.setStatus(StatusCode.ERROR, failure.getMessage() == null ? "error" : failure.getMessage());
-                } else {
-                    recordReturnAttribute(span, method, item);
-                }
-            } finally {
+        return GuicedTelemetry.withSpan(span, uni).onItemOrFailure().invoke((item, failure) -> {
+            if (failure != null) {
+                GuicedTelemetry.end(span, failure);
+            } else {
+                recordReturnAttribute(span, method, item);
                 span.end();
-                if (callScoper.isStartedScope()) {
-                    if (parentSpan != null) {
-                        callScoper.getValues().put(SPAN_KEY, parentSpan);
-                    } else {
-                        callScoper.getValues().remove(SPAN_KEY);
-                    }
-                }
             }
+            restoreParent(callScoper, parentSpan);
         });
+    }
+
+    /** Wraps a Vert.x Future result so asynchronous work remains in the span. */
+    private Future<?> wrapFuture(Span span, Method method, Future<?> future, CallScoper callScoper, Span parentSpan) {
+        return GuicedTelemetry.withSpan(span, future).onComplete(result -> {
+            if (result.failed()) {
+                GuicedTelemetry.end(span, result.cause());
+            } else {
+                recordReturnAttribute(span, method, result.result());
+                span.end();
+            }
+            restoreParent(callScoper, parentSpan);
+        });
+    }
+
+    private void restoreParent(CallScoper callScoper, Span parentSpan) {
+        if (callScoper.isStartedScope()) {
+            if (parentSpan != null) {
+                callScoper.getValues().put(SPAN_KEY, parentSpan);
+            } else {
+                callScoper.getValues().remove(SPAN_KEY);
+            }
+        }
     }
 
     /**
