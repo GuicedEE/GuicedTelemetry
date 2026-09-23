@@ -44,16 +44,8 @@
             <artifactId>lombok</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.guicedee.modules.representations</groupId>
-            <artifactId>json-representation</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.guicedee.modules.services</groupId>
             <artifactId>telemetry-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.guicedee</groupId>
-            <artifactId>vertx</artifactId>
         </dependency>
         <dependency>
             <groupId>com.guicedee</groupId>

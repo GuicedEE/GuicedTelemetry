@@ -12,7 +12,6 @@ import com.guicedee.telemetry.implementations.TelemetryPreStartup;
  * trace interceptors, and telemetry configuration discovery.
  */
 module com.guicedee.telemetry {
-    requires transitive com.guicedee.vertx;
     requires transitive com.guicedee.modules.services.opentelemetry;
     requires transitive com.guicedee.guicedinjection;
     requires transitive aopalliance;
