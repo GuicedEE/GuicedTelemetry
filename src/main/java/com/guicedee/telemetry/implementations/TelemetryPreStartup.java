@@ -1,5 +1,7 @@
 package com.guicedee.telemetry.implementations;
 
+import com.guicedee.client.utils.ClassLoading;
+
 import com.guicedee.client.IGuiceContext;
 import com.guicedee.client.services.lifecycle.IGuicePreStartup;
 import com.guicedee.telemetry.TelemetryOptions;
@@ -61,7 +63,7 @@ public class TelemetryPreStartup implements IGuicePreStartup<TelemetryPreStartup
         if (!classes.isEmpty()) {
             for (var clazzRef : classes) {
                 if (!clazzRef.getName().contains("TelemetryOptionsTest")) {
-                    TelemetryOptions telOptions = clazzRef.loadClass().getAnnotation(TelemetryOptions.class);
+                    TelemetryOptions telOptions = ClassLoading.loadClass(clazzRef).getAnnotation(TelemetryOptions.class);
                     options = new TelemetryOptions() {
                         @Override
                         public Class<? extends java.lang.annotation.Annotation> annotationType() {
@@ -145,7 +147,7 @@ public class TelemetryPreStartup implements IGuicePreStartup<TelemetryPreStartup
                 // Priority 1: TracedService or TelemetryIntegrationTest (Current test class)
                 for (var clazzRef : telemetryClasses) {
                     if (clazzRef.getName().endsWith("TracedService") || clazzRef.getName().endsWith("TelemetryIntegrationTest")) {
-                        targetClass = clazzRef.loadClass();
+                        targetClass = ClassLoading.loadClass(clazzRef);
                         break;
                     }
                 }
@@ -154,14 +156,14 @@ public class TelemetryPreStartup implements IGuicePreStartup<TelemetryPreStartup
                     for (var clazzRef : telemetryClasses) {
                         if (clazzRef.getName().contains("TelemetryAnnotationTest") ||
                             clazzRef.getName().contains("TelemetryOptionsTest")) {
-                            targetClass = clazzRef.loadClass();
+                            targetClass = ClassLoading.loadClass(clazzRef);
                             break;
                         }
                     }
                 }
                 // Priority 3: Anything else
                 if (targetClass == null) {
-                    targetClass = telemetryClasses.getFirst().loadClass();
+                    targetClass = ClassLoading.loadClass(telemetryClasses.getFirst());
                 }
 
                 log.debug("🎯 Selected class for @Telemetry: {}", targetClass.getName());
